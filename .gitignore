@@ -1,0 +1,29 @@
+# Исключить виртуальные окружения
+venv/
+env/
+
+# Исключить временные файлы и кеши
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.log
+
+# Исключить файлы и папки сборки
+build/
+dist/
+*.egg-info/
+
+# Исключить настройки IDE (например, PyCharm)
+.idea/
+.vscode/
+
+# Исключить файлы, создаваемые установщиками
+*.manifest
+*.spec
+
+# Исключить логи и временные файлы
+pip-log.txt
+pip-delete-this-directory.txt
+*.tmp
+.DS_Store

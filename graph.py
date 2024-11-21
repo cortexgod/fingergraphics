@@ -2,6 +2,7 @@ import cv2
 import mediapipe as mp
 import numpy as np
 import time
+import math
 
 # Создаем детектор рук
 handsDetector = mp.solutions.hands.Hands()
@@ -39,17 +40,30 @@ while cap.isOpened():
     flipped = np.fliplr(frame).copy()
     flippedRGB = cv2.cvtColor(flipped, cv2.COLOR_BGR2RGB)
 
-    # Рисуем сетку
+    # Рисуем оси
     height, width, _ = flipped.shape
     center_x, center_y = width // 2, height // 2
 
-    for y in range(-5, 5):
-        pixel_y = center_y - int(y * height / 10)
-        cv2.line(flipped, (0, pixel_y), (width, pixel_y), grid_color, line_thickness)
+    # Рисуем горизонтальную ось
+    cv2.line(flipped, (0, center_y), (width, center_y), grid_color, line_thickness)
+    # Рисуем вертикальную ось
+    cv2.line(flipped, (center_x, 0), (center_x, height), grid_color, line_thickness)
 
-    for x in range(-8, 8):
-        pixel_x = center_x + int(x * width / 17)
-        cv2.line(flipped, (pixel_x, 0), (pixel_x, height), grid_color, line_thickness)
+    # Отмечаем точки с шагом 1 на оси X
+    step = 1  # Шаг для оси X
+    for i in range(-8, 8):  # Для оси X
+        pixel_x = center_x + i * width // 16
+        cv2.circle(flipped, (pixel_x, center_y), 5, (255, 0, 0), -1)  # Точки на оси X
+
+    # Точки для отображения надписей
+    points = [0, math.pi/2, math.pi, -math.pi/2, -math.pi]  # Позиции для надписей
+    labels = ['0', 'pi/2', 'pi', '-pi/2', '-pi']  # Текст для каждой точки
+
+    # Отображаем надписи над нужными точками
+    for i, point in enumerate(points):
+        # Рассчитываем позицию X для каждой из точек
+        pixel_x = center_x + int(point * width / (2*4/3 * math.pi))-25
+        cv2.putText(flipped, labels[i], (pixel_x + 10, center_y + 20), font, 0.5, text_color, font_thickness)
 
     # Определяем оставшееся время для обратного отсчета
     elapsed_time = time.time() - countdown_start

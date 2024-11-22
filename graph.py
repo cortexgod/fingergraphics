@@ -28,7 +28,7 @@ def draw_countdown(frame, seconds_left):
 
 # Переменные для записи пути пальца
 path_points = []
-countdown_time = 3  # Время для обратного отсчета
+countdown_time = 7  # Время для обратного отсчета
 start_recording = False
 countdown_start = time.time()
 
@@ -46,45 +46,37 @@ def draw_ideal_tangent(frame, center_x, width, height):
             continue  # Игнорируем значения за пределами области (например, в точках разрыва)
 
 # Функция для вычисления точности
-def calculate_accuracy(path_points, center_x, width, height):
-    error = 0
-    num_points = 0
+import math
 
-    # Проверяем каждую точку на равномерно распределенных значениях по оси X
-    for i in range(-8, 8):
-        x = i * width // 16  # Расчет X
-        normalized_x = (x - center_x) / (width // 16)  # Нормализуем X для функции тангенса
+def calculate_accuracy(path_points, center_x, center_y, width, height):
+    errors = []
+    for x_tip, y_tip in path_points:
+        # Нормализуем x координату
+        normalized_x = (x_tip - center_x) / 150
         try:
-            ideal_y = math.tan(normalized_x) * height // 4  # Идеальный Y для этой X
+            # Вычисляем идеальный y
+            ideal_y = 360 - math.sin(normalized_x)*180
+            (x_tip, normalized_x, y_tip, ideal_y)
+            error = abs(y_tip - ideal_y)
+            errors.append(error)
         except:
-            continue  # Игнорируем разрывы функции
+            continue  # Игнорируем разрывы функции (например, для тангенса)
 
-        # Ищем ближайшую точку на записи
-        closest_point = None
-        min_distance = float('inf')
-        for x_tip, y_tip in path_points:
-            if abs(x_tip - (center_x + x)) < 10:  # Ищем ближайшую точку по X
-                distance = abs(y_tip - (center_y - ideal_y))  # Расстояние по Y
-                if distance < min_distance:
-                    min_distance = distance
-                    closest_point = (x_tip, y_tip)
-
-        if closest_point:
-            error += min_distance
-            num_points += 1
-
-    if num_points > 0:
-        accuracy =max(0, 100 - error / (num_points*10)) # Чисто для примера, можно адаптировать метрику
+    # Вычисляем медиану ошибок
+    
+    if errors:
+        median_error = np.median(errors)
+        accuracy = max(0, 100 - median_error)  # Пример адаптации метрики
     else:
         accuracy = 0
 
     return accuracy
 
+
 while cap.isOpened():
     ret, frame = cap.read()
     if not ret or cv2.waitKey(1) & 0xFF == ord('q'):
         break
-
     # Отражаем изображение горизонтально
     flipped = np.fliplr(frame).copy()
     flippedRGB = cv2.cvtColor(flipped, cv2.COLOR_BGR2RGB)
@@ -101,12 +93,21 @@ while cap.isOpened():
     # Отображаем надписи над нужными точками
     points = [0, math.pi/2, math.pi, -math.pi/2, -math.pi]  # Позиции для надписей
     labels = ['0', 'pi/2', 'pi', '-pi/2', '-pi']  # Текст для каждой точки
+    point_color = (0, 255, 0)  # Цвет точки (зелёный)
+    point_radius = 4 
     for i, point in enumerate(points):
         pixel_x = center_x + int(point * width / (2*4/3 * math.pi))-25
         cv2.putText(flipped, labels[i], (pixel_x + 10, center_y + 20), font, 0.5, text_color, font_thickness)
+        cv2.circle(flipped, (pixel_x+25, center_y ), point_radius, point_color, -1)
+    cv2.putText(flipped, "1", (center_x, center_y - 180), font, 0.5, text_color, font_thickness)
+    cv2.putText(flipped, "-1", (center_x, center_y + 180), font, 0.5, text_color, font_thickness)
+    # Нарисовать точк
+    # Радиус точки
+    cv2.circle(flipped, (center_x, center_y - 160), point_radius, point_color, -1)
+    cv2.circle(flipped, (center_x, center_y + 160), point_radius, point_color, -1)
 
+    
     # Рисуем идеальную функцию тангенса
-    draw_ideal_tangent(flipped, center_x, width, height)
 
     # Определяем оставшееся время для обратного отсчета
     elapsed_time = time.time() - countdown_start
@@ -134,7 +135,7 @@ while cap.isOpened():
                 duration = end_time - start_time
 
                 # Рассчитываем точность
-                accuracy = calculate_accuracy(path_points, center_x, width, height)
+                accuracy = calculate_accuracy(path_points, center_x, center_y, width, height)
 
                 print(f"Path recorded for {duration:.2f} seconds")
                 print(f"Accuracy: {accuracy:.2f}%")

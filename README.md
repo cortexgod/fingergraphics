@@ -14,11 +14,11 @@
 
 1. Склонируйте репозиторий:
    ```bash
-   git clone https://github.com/ваш_репозиторий/hand-tracking-app.git
+   git clone https://github.com/cortexgod/fingergraphics
    ```
 2. Перейдите в каталог проекта:
    ```bash
-   cd hand-tracking-app
+   cd fingergraphics
    ```
 3. Установите зависимости:
    ```bash

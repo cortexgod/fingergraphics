@@ -15,8 +15,7 @@ font = cv2.FONT_HERSHEY_SIMPLEX
 font_scale = 0.5
 font_thickness = 1
 text_color = (255, 255, 255)
-path_color = (255, 0, 0)  # Цвет для следа (синий)
-ideal_line_color = (0, 255, 255)  # Цвет идеальной линии (желтый)
+path_color = (255, 0, 0)
 
 # Функция для отображения обратного отсчета
 def draw_countdown(frame, seconds_left):
@@ -65,7 +64,7 @@ def calculate_accuracy(path_points, center_x, center_y, width, height):
     # Вычисляем медиану ошибок
     
     if errors:
-        median_error = np.median(errors)
+        median_error = np.mean(errors)
         accuracy = max(0, 100 - median_error)  # Пример адаптации метрики
     else:
         accuracy = 0

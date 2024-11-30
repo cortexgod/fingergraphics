@@ -3,7 +3,7 @@ import mediapipe as mp
 import numpy as np
 import time
 import math
-
+import random
 # Создаем детектор рук
 handsDetector = mp.solutions.hands.Hands()
 cap = cv2.VideoCapture(0)
@@ -12,10 +12,11 @@ cap = cv2.VideoCapture(0)
 grid_color = (0, 255, 0)
 line_thickness = 1
 font = cv2.FONT_HERSHEY_SIMPLEX
-font_scale = 0.5
-font_thickness = 1
+font_thickness = 2
 text_color = (255, 255, 255)
 path_color = (255, 0, 0)
+point_color = (0, 255, 0)
+point_radius = 4
 
 # Функция для отображения обратного отсчета
 def draw_countdown(frame, seconds_left):
@@ -25,90 +26,79 @@ def draw_countdown(frame, seconds_left):
     text_y = (frame.shape[0] + text_size[1]) // 2
     cv2.putText(frame, text, (text_x, text_y), font, 3, (0, 0, 255), 3)
 
-# Переменные для записи пути пальца
-path_points = []
-countdown_time = 7  # Время для обратного отсчета
-start_recording = False
-countdown_start = time.time()
-
-# Функция для рисования идеальной функции тангенса
-def draw_ideal_tangent(frame, center_x, width, height):
-    # Рисуем идеальную функцию тангенса (y = tan(x))
-    for i in range(-8, 8):
-        x = i * width // 16  # Расчет X
-        normalized_x = (x - center_x) / (width // 16)  # Нормализуем X для функции тангенса
-        try:
-            y = math.tan(normalized_x) * height // 4  # Расчет Y для функции тангенса
-            pixel_y = int(center_y - y)  # Инвертируем координату Y
-            cv2.circle(frame, (x + center_x, pixel_y), 1, ideal_line_color, -1)
-        except:
-            continue  # Игнорируем значения за пределами области (например, в точках разрыва)
-
 # Функция для вычисления точности
-import math
-
-def calculate_accuracy(path_points, center_x, center_y, width, height):
+def calculate_accuracy(path_points, center_x, center_y, width, height, a, b):
     errors = []
     for x_tip, y_tip in path_points:
-        # Нормализуем x координату
-        normalized_x = (x_tip - center_x) / 150
+        # Нормализация координаты X
+        normalized_x = (x_tip - center_x) / 150  
         try:
-            # Вычисляем идеальный y
-            ideal_y = 360 - math.sin(normalized_x)*180
-            (x_tip, normalized_x, y_tip, ideal_y)
+            # Вычисление идеальной Y-координаты с учетом новой формулы
+            ideal_y = center_y - a * math.sin(normalized_x + b * math.pi) * 180  
             error = abs(y_tip - ideal_y)
             errors.append(error)
         except:
-            continue  # Игнорируем разрывы функции (например, для тангенса)
+            continue  # Игнорируем разрывы функции
 
-    # Вычисляем медиану ошибок
-    
     if errors:
         median_error = np.mean(errors)
-        accuracy = max(0, 100 - median_error)  # Пример адаптации метрики
+        accuracy = max(0, 100 - median_error)  # Адаптация метрики
     else:
         accuracy = 0
 
     return accuracy
 
+# В начале программы выводим сообщение
+message_frame = np.zeros((720, 1280, 3), dtype=np.uint8)
+
+
+
+a = random.randint(-2, 2)
+if a==0: a=1
+b = random.randint(-2, 2)
+cv2.putText(message_frame, f"Draw a y = {a}*sin(x+{b}*pi) graph from -pi to pi, you will have 15 second to prepare", (50, 360), 
+            font, 1, (255, 255, 255),3, cv2.LINE_AA)
+cv2.imshow("Message", message_frame)
+cv2.waitKey(7000)  # Показываем сообщение в течение 3 секунд
+cv2.destroyWindow("Message")
+
+# Переменные для записи пути пальца
+path_points = []
+countdown_time = 8  # Время для обратного отсчета
+start_recording = False
+countdown_start = time.time()
 
 while cap.isOpened():
     ret, frame = cap.read()
     if not ret or cv2.waitKey(1) & 0xFF == ord('q'):
         break
-    # Отражаем изображение горизонтально
     flipped = np.fliplr(frame).copy()
     flippedRGB = cv2.cvtColor(flipped, cv2.COLOR_BGR2RGB)
 
     # Рисуем оси
     height, width, _ = flipped.shape
     center_x, center_y = width // 2, height // 2
-
-    # Рисуем горизонтальную ось
     cv2.line(flipped, (0, center_y), (width, center_y), grid_color, line_thickness)
-    # Рисуем вертикальную ось
     cv2.line(flipped, (center_x, 0), (center_x, height), grid_color, line_thickness)
 
-    # Отображаем надписи над нужными точками
-    points = [0, math.pi/2, math.pi, -math.pi/2, -math.pi]  # Позиции для надписей
-    labels = ['0', 'pi/2', 'pi', '-pi/2', '-pi']  # Текст для каждой точки
-    point_color = (0, 255, 0)  # Цвет точки (зелёный)
-    point_radius = 4 
+    # Добавляем метки осей
+    points = [0, math.pi/2, math.pi, -math.pi/2, -math.pi]
+    labels = ['0', 'pi/2', 'pi', '-pi/2', '-pi']
     for i, point in enumerate(points):
-        pixel_x = center_x + int(point * width / (2*4/3 * math.pi))-25
+        pixel_x = center_x + int(point * width / (2 * 4 / 3 * math.pi)) - 25
         cv2.putText(flipped, labels[i], (pixel_x + 10, center_y + 20), font, 0.5, text_color, font_thickness)
-        cv2.circle(flipped, (pixel_x+25, center_y ), point_radius, point_color, -1)
+        cv2.circle(flipped, (pixel_x + 25, center_y), point_radius, point_color, -1)
     cv2.putText(flipped, "1", (center_x, center_y - 180), font, 0.5, text_color, font_thickness)
     cv2.putText(flipped, "-1", (center_x, center_y + 180), font, 0.5, text_color, font_thickness)
-    # Нарисовать точк
-    # Радиус точки
-    cv2.circle(flipped, (center_x, center_y - 160), point_radius, point_color, -1)
-    cv2.circle(flipped, (center_x, center_y + 160), point_radius, point_color, -1)
-
+    cv2.circle(flipped, (center_x, center_y - 170), point_radius, point_color, -1)
+    cv2.circle(flipped, (center_x, center_y + 170), point_radius, point_color, -1)
+    cv2.putText(flipped, "2", (center_x, center_y - 330), font, 0.5, text_color, font_thickness)
+    cv2.putText(flipped, "-2", (center_x, center_y + 330), font, 0.5, text_color, font_thickness)
+    cv2.circle(flipped, (center_x, center_y - 320), point_radius, point_color, -1)
+    cv2.circle(flipped, (center_x, center_y + 320), point_radius, point_color, -1)
     
-    # Рисуем идеальную функцию тангенса
 
-    # Определяем оставшееся время для обратного отсчета
+    # Отображаем обратный отсчёт
     elapsed_time = time.time() - countdown_start
     if not start_recording and elapsed_time < countdown_time:
         draw_countdown(flipped, countdown_time - int(elapsed_time))
@@ -116,7 +106,7 @@ while cap.isOpened():
         start_recording = True
         start_time = time.time()  # Начало записи пути
 
-    # Распознаем руки
+    # Обработка рук
     results = handsDetector.process(flippedRGB)
     if results.multi_hand_landmarks is not None:
         for hand_landmarks in results.multi_hand_landmarks:
@@ -124,30 +114,30 @@ while cap.isOpened():
             y_tip = int(hand_landmarks.landmark[8].y * height)
             cv2.circle(flipped, (x_tip, y_tip), 10, (255, 0, 0), -1)
 
-            # Если запись началась, сохраняем координаты пальца
             if start_recording:
                 path_points.append((x_tip, y_tip))
 
-            # Прерываем запись, если палец выходит за границы
-            if start_recording and (x_tip < 0 or x_tip > width or y_tip < 0 or y_tip > height):
+            if start_recording and (x_tip < 0 or x_tip > width/2+width/3+50):
                 end_time = time.time()
                 duration = end_time - start_time
 
-                # Рассчитываем точность
-                accuracy = calculate_accuracy(path_points, center_x, center_y, width, height)
+                accuracy = calculate_accuracy(path_points, center_x, center_y, width, height, a, b)
 
-                print(f"Path recorded for {duration:.2f} seconds")
-                print(f"Accuracy: {accuracy:.2f}%")
+                # Отображаем результат на экране
+                result_frame = np.zeros((720, 1280, 3), dtype=np.uint8)
+                cv2.putText(result_frame, f"Duration: {duration:.2f} seconds", (50, 300), font, 2, (255, 255, 255), 5, cv2.LINE_AA)
+                cv2.putText(result_frame, f"Accuracy: {accuracy:.2f}%", (50, 400), font, 2, (255, 255, 255), 5, cv2.LINE_AA)
+                cv2.imshow("Result", result_frame)
+                cv2.waitKey(5000)  # Показ результата в течение 5 секунд
                 cap.release()
                 cv2.destroyAllWindows()
                 exit()
 
-    # Рисуем след за пальцем
+    # Рисуем путь
     if len(path_points) > 1:
         for i in range(1, len(path_points)):
-            cv2.line(flipped, path_points[i-1], path_points[i], path_color, 2)
+            cv2.line(flipped, path_points[i - 1], path_points[i], path_color, 2)
 
-    # Преобразуем изображение обратно в BGR для отображения
     res_image = cv2.cvtColor(flipped, cv2.COLOR_RGB2BGR)
     cv2.imshow("Hands", res_image)
 

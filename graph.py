@@ -1,6 +1,9 @@
 import cv2
 import mediapipe as mp
 import numpy as np
+import time
+import math
+import random
 record_file = "results.txt"
 try:
     with open(record_file, "r") as f:
@@ -8,16 +11,27 @@ try:
 except (FileNotFoundError, ValueError):
     record = 0.0
 # Константы
-GRID_COLOR = (0, 255, 0)
-LINE_THICKNESS = 1
+
 FONT = cv2.FONT_HERSHEY_SIMPLEX
 FONT_THICKNESS = 2
 TEXT_COLOR = (255, 255, 255)
 PATH_COLOR = (255, 0, 0)
 POINT_COLOR = (0, 255, 0)
 POINT_RADIUS = 4
+GRID_COLOR = (0, 255, 0)
+LINE_THICKNESS = 1
 
+# Координаты кнопок в меню
+buttons_menu = {
+    "start": ((400, 300), (600, 400)),
+    "exit": ((400, 450), (600, 550)),
+}
+buttons_restart = {
+    "restart": ((400, 300), (600, 400)),
+    "menu": ((400, 450), (600, 550)),
+}
 
+phase = 0
 # Функция для отображения сообщения
 def show_message(message, duration=3):
     message_frame = np.zeros((720, 1280, 3), dtype=np.uint8)
@@ -142,8 +156,8 @@ def run_sin_program():
                     else:
                         cv2.putText(result_frame, f"Record: {record:.2f}%", (50, 500), FONT, 2, (255, 255, 255), 5,
                                     cv2.LINE_AA)
-                    cv2.imshow("Result", result_frame)
-                    cv2.waitKey(5000)  # Показ результата в течение 5 секунд
+                    cv2.imshow("Hands", result_frame)
+                    cv2.waitKey(5000)
                     cap.release()
                     cv2.destroyAllWindows()
 
@@ -159,39 +173,9 @@ def run_sin_program():
     cv2.destroyAllWindows()
     phase = 1
 
-
-
-
-
-
-import cv2
-import mediapipe as mp
-import numpy as np
-import time
-import math
-import random
-
 # Создаем детектор рук
 handsDetector = mp.solutions.hands.Hands(max_num_hands=1)
 
-# Константы
-GRID_COLOR = (0, 255, 0)
-LINE_THICKNESS = 1
-FONT = cv2.FONT_HERSHEY_SIMPLEX
-FONT_THICKNESS = 2
-TEXT_COLOR = (255, 255, 255)
-
-# Координаты кнопок в меню
-buttons_menu = {
-    "start": ((400, 300), (600, 400)),
-    "exit": ((400, 450), (600, 550)),
-}
-buttons_restart = {
-    "restart": ((400, 300), (600, 400)),
-    "menu": ((400, 450), (600, 550)),
-}
-
-phase = 0
 # Функция для отрисовки меню
 def draw_buttons(frame, buttons):
     for name, ((x1, y1), (x2, y2)) in buttons.items():
@@ -227,8 +211,8 @@ def mouse_callback(event, x, y, flags, param):
                         phase = 2  # Переход к игре
                     elif name == "menu":
                         phase = 0  # Переход в главное меню
-cv2.setMouseCallback("Main Window", mouse_callback)
 
+cv2.setMouseCallback("Main Window", mouse_callback)
 while True:
     frame = np.zeros((720, 1280, 3), dtype=np.uint8)
 
@@ -251,4 +235,3 @@ while True:
         break
 
 cv2.destroyAllWindows()
-
